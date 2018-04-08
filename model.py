@@ -169,7 +169,7 @@ class EDSR(object):
                                         tmp_image[j*tmp.shape[0]:(j+1)*tmp.shape[0],-1*tmp.shape[1]:] = tmp
 			return tmp_image
 		else:
-			return self.sess.run(self.out,feed_dict={self.input:x})
+			return self.sess.run(self.out,feed_dict={self.input:[x[:,:]]})[0]
 
 	"""
 	Function to setup your input data pipeline
@@ -184,11 +184,15 @@ class EDSR(object):
 	Train the neural network
 	"""
 	def train(self,iterations=1000,save_dir="saved_models"):
-		#Removing previous save directory if there is one
-		if os.path.exists(save_dir):
-			shutil.rmtree(save_dir)
-		#Make new save directory
-		os.mkdir(save_dir)
+		newTrain = False
+		if not os.path.exists(save_dir):
+			os.mkdir(save_dir)
+			newTrain = True
+		else:
+			if os.path.exists(save_dir+"/test"):
+				shutil.rmtree(save_dir+"/test")
+			if os.path.exists(save_dir+"/train"):
+				shutil.rmtree(save_dir+"/train")
 		#Just a tf thing, to merge all summaries into one
 		merged = tf.summary.merge_all()
 		#Using adam optimizer as mentioned in the paper
@@ -201,6 +205,8 @@ class EDSR(object):
 		with self.sess as sess:
 			#Initialize all variables
 			sess.run(init)
+			if not newTrain:
+				self.resume(save_dir)
 			test_exists = self.test_data
 			#create summary writer for train
 			train_writer = tf.summary.FileWriter(save_dir+"/train",sess.graph)
